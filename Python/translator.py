@@ -14,14 +14,14 @@ cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 
-db = firestore.client()                     #määritellään db olio Firestoreen
+db = firestore.client()                     #Defining the object for Firebase
 
 firebase = pyrebase.initialize_app(a.getConf())
-storage = firebase.storage()                #määritellään storage olio Firebase/Cloud Storageen
+storage = firebase.storage()                #Defining the objet for Firebase Cloud Storage
 
 
 
-def img_Or_Vid(path):                       #katsotaan onko kuva vai video nimen perusteella eli onko .jpg vai .mp4
+def img_Or_Vid(path):                       #Seeing if the dat is image or video base on the file ending .jpg vai .mp4
     print("Ollaan funktiossa img_Or_Vid")
 
     file = path
@@ -39,11 +39,11 @@ def img_Or_Vid(path):                       #katsotaan onko kuva vai video nimen
 
 def img_Handling(whereGet, dataClass):
     print("Nyt ollaan img_Handling funktiossa")
-    pic = cv2.imread(whereGet)                                                          #Lukee kuvan tiedostosta.
+    pic = cv2.imread(whereGet)                                                          #Reading the image from the file.
     name = "imgf.jpg"
     dir1 = whereGet
     dir2 = "tempForData\\" + name
-    cPic = cv2.flip(pic, 1)                                                             #Kuvan kääntäminen, jos laittaa 0 kääntää pystysuunnassa, 1:llä vaakatasossa
+    cPic = cv2.flip(pic, 1)                                                             #Turning the picture to upright
     cv2.imwrite(dir2, cPic)
     saveToCloud(dir1, dir2, dataClass)
 
@@ -67,17 +67,17 @@ def vid_Handling(whereGet, dataClass):
     while(vid_capture.isOpened()):
         ret, frame = vid_capture.read()
 
-        if ret == True:
-            a = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)                                      #En ymmärrä mksi ei toimi ilman tätä
-            b = cv2.resize(a,(400,256),fx = 0,fy = 0, interpolation = cv2.INTER_CUBIC)      #ja tätä, mutta ei toimi
+        if ret == True:                                     #Processing the frame
+            a = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)                                      
+            b = cv2.resize(a,(400,256),fx = 0,fy = 0, interpolation = cv2.INTER_CUBIC)    
             c = cv2.flip(b,1)
-            #kirjoitetaan video
+            #Writing the video out
             out.write(c)
 
         else:
-    #print("Ei löytyny videota")
+    #print("Video was not found")
             break
-    vid_capture.release()       #Päästetään irti jo tässä, että save funktiossa voidaan poistaa tiedostot
+    vid_capture.release()       # Releasing the object, so we can delete the files in sace function
     out.release()
     cv2.destroyAllWindows()
 
@@ -91,10 +91,10 @@ def vid_Handling(whereGet, dataClass):
 def saveToCloud(data, dataf, dataClass):
     print("Ollaan save funktiossa ja saatiin: ", data," ja ", dataf)
 
-    x = random.random()         #nimeämistä varten vaan laitoin tällasen random number generator, niin toivottavasti ei satu samoja nimiä :)
+    x = random.random()         #For naming a random number generator
     y = random.random()
 
-    #Miten labelin saa tähän, että esim A kirjaimeksi päätelly menee kaikki samaan collectioniin jne.. U koska käyttäjältä saadut
+    #The data that gets labeled A goes all to the same collection, the U is for user based data
     datanluokka = whatClass(int(dataClass))
     if datanluokka == "":
         print("Ei tullut luokaksi mitään arvoa")
@@ -106,23 +106,23 @@ def saveToCloud(data, dataf, dataClass):
         name = "data" + str(x + y)
         print("Kuvan nimeksi tulee: " + name)
 
-        #HUOM KYSE FIREBASEN STORAGESTA
-        #Kuvan lataaminen
-        #child parametreihin laitetaan haluttu nimi tiedostolle, jos haluaa kansioon tallentaa niin esim "A/my_image"
-        #put parametreihin tulee tiedoston polku/sijainti, ei onnistunut itsellä arrayn laittaminen
+        #HOX! Now using FIREBASE STORAGE.
+        #Uploading the picture
+        #Child parametere is the wanted name for the data, if destination is a in another file the path is "A/my_image" for exmp. 
+        #put paramete are the path of the file
         storage.child(dirInStorage + name).put(data, a.emailAndPassword())                           
 
         #Get URL of image
         url = storage.child(dirInStorage + name).get_url(a.emailAndPassword())
         print(url)
  
-        #HUOM NYT FIRESTORESTA KYSE
+        #HOX! Now using FIRESTORE.
         db.collection(label + '-URL').add({'URL':url,'num':x+y}) 
 
         name = "dataf" + str(x)
         print("Kuvan nimeksi tulee: " + name)
 
-        #Sama käännetyllä kuvalle
+        #Same to the turned picture
         storage.child(dirInStorage + name).put(dataf, a.emailAndPassword())                           
 
         url = storage.child(dirInStorage + name).get_url(a.emailAndPassword())
@@ -130,7 +130,7 @@ def saveToCloud(data, dataf, dataClass):
           
         db.collection(label + '-URL').add({'URL':url,'num':x+y})
 
-    #Poistetaan kuvat serveriltä
+    #Deleting the picture from the server
     os.remove(data)
     os.remove(dataf)
 

@@ -1,3 +1,8 @@
+/*
+Pin ENgine opens up a window in which PIN number for he card is asked.
+*/
+
+
 #include "enginedialog.h"
 #include "ui_enginedialog.h"
 
@@ -11,7 +16,7 @@ EngineDialog::EngineDialog(QWidget *parent) :
     connect(ptimer,SIGNAL(timeout()),
             this,SLOT(timeri()));
 
-    qDebug() << "Ollaan Pin DLL enginen constructorissa nyttt";
+    qDebug() << "Ollaan Pin DLL enginen constructorissa nyt";
 
     this->setWindowTitle("PIN-ikkuna");
 
@@ -48,9 +53,9 @@ void EngineDialog::handleButton()
 {
     qDebug() << "Ollaan handeButtonissa";
     ptimer->stop();
-    QObject * sender = QObject::sender();//Tehdään QObject sender pointteri joka palauttaa pointterin sille objectille joka lähetti signaalin
-    qDebug() << sender->objectName() << "kaytetty painike";//pointterilla osoitetaan objectNameen, mikä on painikkeen nimi joka lähetti signaalin/jota painettiin
-    QString ruutu = sender->objectName();//-"- nimi annetaan QString tyyppiselle muuttujalle arvoksi
+    QObject * sender = QObject::sender();                       //QObject sender pointer that return the pointer to the object that send the signal
+    qDebug() << sender->objectName() << "kaytetty painike";     //With the pointer we point to objectName, which is the button that send the signal
+    QString ruutu = sender->objectName();                       //the senders name is given to QString type variable as a value
 
     foreach(QPushButton * ptr, napit){
         if (ptr->objectName() == ruutu){

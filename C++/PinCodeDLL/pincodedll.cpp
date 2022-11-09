@@ -1,3 +1,8 @@
+/*
+This interface and engine are for the processing of the card PIN number.
+
+*/
+
 #include "pincodedll.h"
 
 PinCodeDLL::PinCodeDLL(QObject *parent):QObject (parent)

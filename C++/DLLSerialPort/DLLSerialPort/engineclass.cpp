@@ -1,3 +1,8 @@
+/*
+This is the engine class for the RFID reader and does the actual operations.
+For example read out the Port, Manufacturer ans Serial number.
+*/
+
 #include "engineclass.h"
 
 EngineClass::EngineClass(QObject *parent):QObject(parent)
@@ -28,7 +33,8 @@ EngineClass::EngineClass(QObject *parent):QObject(parent)
             << "\nSerial number: " << (!serialNumber.isEmpty() ? serialNumber : blankString)
             << "\nVendor Identifier: " << (vendorIdentefier)
             << "\nProduct Identifier: " << (productIdentifier) << "\n";
-        //Etsitään oikea portti tiedossa olevien oikeiden tietojen avulla jotka on "" sisällä, pitäs periaatteessa toimia kaikilla olimexin lukijoilla?
+        // Finding the right port whit the info inside "", should in theory connect to all RFID olimex readers
+        // provided the description is "USB-sarjalaite" and vendor identefier is 15ba"
         if(description == "USB-sarjalaite" && vendorIdentefier == "15ba"){
             portti = serialPortInfo.portName();
             qDebug() << portti;
@@ -55,7 +61,7 @@ void EngineClass::openSerialPort(QString a)
     qDebug() << "Ollaan saatu oikea portti/laite";
     SerialPort.setPortName(a);
     qDebug() << SerialPort.portName();
-    SerialPort.setBaudRate(9600);
+    SerialPort.setBaudRate(9600);                   //Setting up connection info
     SerialPort.setDataBits(QSerialPort::Data8);
     SerialPort.setParity(QSerialPort::NoParity);
     SerialPort.setStopBits(QSerialPort::OneStop);
@@ -65,7 +71,7 @@ void EngineClass::openSerialPort(QString a)
         qDebug() << "ei aukea" << Qt::endl;
     }else{
         qDebug() << "portti aukesi" << Qt::endl;
-        connect(&SerialPort,SIGNAL(readyRead()),//SerialPort ei ole pointteri, niin laitetaan &
+        connect(&SerialPort,SIGNAL(readyRead()),
                 this,SLOT(readID()));
     }
 }

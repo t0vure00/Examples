@@ -1,3 +1,10 @@
+/*
+Part of a project that's objective was to make a banking app.
+This interface and engine is meant for connetcting the RFID reader 
+and then reading a tags (the bank card) ID, which was unique to a customer
+and delivering it forward to the program for a check.
+*/
+
 #include "dllserialport.h"
 
 
