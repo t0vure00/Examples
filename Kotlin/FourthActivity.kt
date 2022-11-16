@@ -1,12 +1,5 @@
 package com.example.viittomatulkki
 
-/*
-Part of a translator app. This is the main view that opened up.
-It for example handled the communication with firebase, where the database for
-the pictures and user info was.
- */
-
-
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -58,7 +51,7 @@ class FourthActivity() : AppCompatActivity(){
 
         auth = Firebase.auth
 
-        //Making sure OpenCV is installed
+        //Varmistetaan, että OpenCV on asennettu
         if (OpenCVLoader.initDebug()){
             Log.d(TAG,"OpenCVInstalled")
         }else{
@@ -74,9 +67,9 @@ class FourthActivity() : AppCompatActivity(){
     fun onClickButtonListenerLopeta() {
         val button_Lopeta = findViewById<Button>(R.id.button_lopeta)
         button_Lopeta!!.setOnClickListener {
-            //Signing out
+            //Kirjaudutaan ulos
             auth.signOut()
-            //Return to sign in
+            //paluu kirjautumissivuun
             this.finish()
         }
     }
@@ -84,10 +77,10 @@ class FourthActivity() : AppCompatActivity(){
 
     fun onClickButtonListenerOtaKuva()
     {
-        //Taking the picture: https://developer.android.com/training/camera/photobasics
+        //Kuvan otto: https://developer.android.com/training/camera/photobasics
         val button_otakuva = findViewById<Button>(R.id.button_picture)
         button_otakuva.setOnClickListener {
-            //Taking the picture with the phones camera app, making a new Intent for it
+            //kuvan ottaminen puhelimen omassa kamera sovelluksessa aloitus
             val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
 
             if(takePictureIntent.resolveActivity(this.packageManager) != null) {
@@ -103,10 +96,10 @@ class FourthActivity() : AppCompatActivity(){
 
     fun onClickButtonListenerOtavideo()
     {
-        //Taking the video: https://developer.android.com/training/camera/videobasics
+        //Videon otto: https://developer.android.com/training/camera/videobasics
         val button_otavideo = findViewById<Button>(R.id.button_video)
         button_otavideo.setOnClickListener {
-            //Taking the video with the phones camera app, making a new Intent for it
+            //videon ottaminen puhelimen omassa kamera sovelluksessa aloitus
             val takeVideoIntent = Intent(MediaStore.ACTION_VIDEO_CAPTURE)
 
             if(takeVideoIntent.resolveActivity(this.packageManager) != null) {
@@ -117,27 +110,27 @@ class FourthActivity() : AppCompatActivity(){
         }
     }
 
-    //Functio made for receiving the pic/video with the examples from the links
+    //Funktio tehty kuva ja video linkeistä saadulla pohjalla
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         Log.d(TAG, data.toString())
-        //Defining the imageView objects to point to widgets
+        //Määritellään imageView oliot osoittamaan widgetteihin
         val imageView: ImageView = findViewById(R.id.imageView)
         val videoView : VideoView = findViewById(R.id.videoView)
-        //Setting the video- and imageView to transparent
+        //Asetaan video- ja imageView läpinäkyviksi
         imageView.setVisibility(View.INVISIBLE)
         videoView.setVisibility(View.INVISIBLE)
 
         if (requestCode == REQUEST_PICTURE_CAPTURE && resultCode == Activity.RESULT_OK) {
-            //If result is ok and our request code is equal to request code
-            //Setting imageView back to visible
+            //if result is ok and our request code is equal to request code
+            //asetetaan imageview näkyväksi
             imageView.setVisibility(View.VISIBLE)
 
 
-            //Defining bitmap
+            //bitmapin määrittäminen
             val bitmap = data?.extras?.get("data") as Bitmap
-            //Setting it to visible
+            //asetaan bitmappi näkymään
             imageView.setImageBitmap(bitmap)
-            //To editing the picture
+            //Mennään editoimaan kuvaa
             picEditing()
 
         }else if (requestCode == REQUEST_VIDEO_CAPTURE && resultCode == RESULT_OK){
@@ -157,16 +150,14 @@ class FourthActivity() : AppCompatActivity(){
                 val path = getRealPathFromURIVid(videoUri)
                 Log.d(TAG, "VIDEOPATH ON")
 
-                //Sending data trough machine learning algorithm
+                //Lähetään machine lerning algoritmin läpi
                 val predictedClass = obj.processVideo(path)
                 Log.d(TAG, "Predicted class is: $predictedClass")
-                //This was meant to set the prediction to the text box, but
-                //using the machine learning algorithm did not work straight
-                //in the app.
+                //Tällä oli tarkoitus asettaa ennustus Arvio laatikkoon
                 //val predictionText = findViewById<TextView>(R.id.Arvioteksti)
                 //val previousText = predictionText.text
                 //predictionText.text = "$previousText$predictedClass"
-                //Saving the video
+                //Mennään tallentamaan/editoimaan videota
                 saveInStorageVideo(videoUri, predictedClass)
             }else {
                 Log.d(TAG,"videoUri oli tyhjä")
@@ -188,28 +179,27 @@ class FourthActivity() : AppCompatActivity(){
         imageView.buildDrawingCache()
         val bitmap = (imageView.drawable as BitmapDrawable).bitmap
 
-        //Bitmap to Mat
+        //Bitmap Matiksi
         val orig = Mat(bitmap.height, bitmap.width, CvType.CV_8UC3)
         val myBitmap32 = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         Utils.bitmapToMat(myBitmap32, orig)
 
-        //Changing size
+        //Muutetaan kokoa
         val resizeImage : Mat = orig
         val sz= Size(400.0, 256.0)
         Imgproc.resize(orig, resizeImage, sz,0.0, 0.0)
-        //Getting the path from the device
+        //Haetaan kuvan path laitteessa
         val tempUri = getImageUri(getApplicationContext(), bitmap)
         val finalFile = File(getRealPathFromURI(tempUri))
 
         val predictedClass = obj.processImage(finalFile.toString())
         Log.d(TAG, "Predicted class is: $predictedClass")
-        //This was meant to set the prediction to the text box, but
-        //using the machine learning algorithm did not work straight
-        //in the app.
+        //Tällä oli tarkoitus asettaa ennustus Arvio laatikkoon
         //val predictionText = findViewById<TextView>(R.id.Arvioteksti)
         //val previousText = predictionText.text
         //predictionText.text = "$previousText$predictedClass"
-        //Saving the picture
+        //Mennään tallentamaan/editoimaan videota
+
         saveInStorageImage(resizeImage,predictedClass)
     }
 
@@ -217,7 +207,7 @@ class FourthActivity() : AppCompatActivity(){
     private fun saveInStorageImage(data: Mat, predictedClass: String){
         Log.d(TAG, "saveInStorageImage")
 
-        //Mat to Bitmap
+        //Mat Bitmapiksi
         val myBitmap32 = Bitmap.createBitmap(data.cols(), data.rows(), Bitmap.Config.RGB_565)
         Utils.matToBitmap(data, myBitmap32)
 
@@ -252,25 +242,25 @@ class FourthActivity() : AppCompatActivity(){
         }
     }
 
-    //Communication with Storage based on this: https://firebase.google.com/docs/storage/android/start
+    //Storagen kanssa kommunikointi tämän pohjalta: https://firebase.google.com/docs/storage/android/start
     private fun saveInStorageVideo(data: Uri?, predictedClass: String){
         Log.d(TAG, "Saving the video")
 
-        //Pictures name in the database
+        //Kuvan nimi tietokannassa
         val rand = Random.nextInt()
         val name = "$rand.mp4"
-        //Making a reference to the storage
+        //Tehdään viittaus storageen
         val imageRef = storageRef.child("dataFromUsers/U$predictedClass/video$name")
 
 
         Log.d(TAG, imageRef.toString())
-        //Uploading the picture to storage
+        //Ladataan kuva storageen
         val uploadTask = data?.let { imageRef.putFile(it) }
         uploadTask?.addOnFailureListener {
             Log.d(TAG, "Upload was not successful")
         }?.addOnSuccessListener {
             Log.d(TAG, "Upload was successful")
-            //Getting the picture URL, to put to Firestore
+            //Haetaan kuvan URL, että saadaan tallennettua Firestoreen
             val urlTask = uploadTask.continueWithTask { task ->
                 if (!task.isSuccessful) {
                     task.exception?.let {
@@ -303,14 +293,14 @@ class FourthActivity() : AppCompatActivity(){
             "num" to rand.toString())
 
 
-        //Uploading the URL to Firestore to appropriate collection
+        //Ladataan URL Firestoreen UX-URL collectioniin
         db.collection("U$predictedClass-URL").add(data).addOnSuccessListener {
             Log.d(TAG, "Saatiin URL firestoreen")
         }
 
     }
 
-    // Extension function to convert bitmap to byte array
+    // extension function to convert bitmap to byte array
     private fun Bitmap.toByteArray(): ByteArray {
         ByteArrayOutputStream().apply {
             compress(Bitmap.CompressFormat.JPEG, 10, this)
@@ -318,7 +308,7 @@ class FourthActivity() : AppCompatActivity(){
         }
     }
 
-    //The next functions are based on: https://stackoverflow.com/questions/20327213/getting-path-of-captured-image-in-android-using-camera-intent  User: Atai Ambus
+    //Seeuraavat funktiota katsottu: https://stackoverflow.com/questions/20327213/getting-path-of-captured-image-in-android-using-camera-intent  Atai Ambus käyttäjltä
     fun getImageUri(inContext: Context, inImage: Bitmap): Uri? {
         val rand = Random.nextInt()
         val bytes = ByteArrayOutputStream()
