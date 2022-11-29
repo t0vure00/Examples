@@ -1,2 +1,2 @@
 # Examples
-Coding examples by language from different projects
+Coding examples from different projects
