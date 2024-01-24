@@ -6,165 +6,92 @@ from firebase_admin import firestore
 from google.cloud import storage
 import cv2
 import random
-import authentication as a
+import authentication as auth
 
 
-
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
-
-
-db = firestore.client()                     #Defining the object for Firebase
-
-firebase = pyrebase.initialize_app(a.getConf())
-storage = firebase.storage()                #Defining the objet for Firebase Cloud Storage
-
-
-
-def img_Or_Vid(path):                       #Seeing if the dat is image or video base on the file ending .jpg vai .mp4
-    print("Ollaan funktiossa img_Or_Vid")
-
-    file = path
-    #for file in os.listdir(path):
-    if file.endswith(".jpg"):
-        print("Kuva oli: " + path)
-        return 1,path
-    elif file.endswith(".mp4"):
-        print("Video oli: " + path)
-        return 2,path
-    else:
-        print("Ei tunnistanut kuvaksi (.jpg) eikä videoksi (.mp4)")
-
-
-
-def img_Handling(whereGet, dataClass):
-    print("Nyt ollaan img_Handling funktiossa")
-    pic = cv2.imread(whereGet)                                                          #Reading the image from the file.
-    name = "imgf.jpg"
-    dir1 = whereGet
-    dir2 = "tempForData\\" + name
-    cPic = cv2.flip(pic, 1)                                                             #Turning the picture to upright
-    cv2.imwrite(dir2, cPic)
-    saveToCloud(dir1, dir2, dataClass)
-
-
-def vid_Handling(whereGet, dataClass):
-    print("Nyt ollaan vid_Handling funktiossa")
-    print("whereGet on: " + whereGet)
-
-    vid_capture = cv2.VideoCapture(whereGet)
-    print(vid_capture)
-
+class TranslatorDataHandling:
     
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    def __init__(self):
+        self.IMG_ID = 1
+        self.VID_ID = 2
+        self.data_class = None
+        self.letters = ["A","B","C","D","E","F","G","H","I","J","K","L",
+                        "M","N","O","P","Q","R","S","T","U","V","W","X",
+                        "Y","Z","Å","Ä","Ö"]
+        cred = credentials.Certificate("serviceAccountKey.json")
+        firebase_admin.initialize_app(cred)
+        self.db = firestore.client()
+        firebase = pyrebase.initialize_app(auth.getConf())
+        self.storage = firebase.storage()
 
-    name = "vidf.mp4"
-    dir1 = whereGet
-    dir2 = "tempForData\\" + name
-
-    out = cv2.VideoWriter(dir2,fourcc, 7.0, (400,256), isColor=False)
-
-    while(vid_capture.isOpened()):
-        ret, frame = vid_capture.read()
-
-        if ret == True:                                     #Processing the frame
-            a = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)                                      
-            b = cv2.resize(a,(400,256),fx = 0,fy = 0, interpolation = cv2.INTER_CUBIC)    
-            c = cv2.flip(b,1)
-            #Writing the video out
-            out.write(c)
-
+    def process_data(self, source_path, data_class):
+        self.data_class = data_class
+        if(source_path.endswith(".jpg")):
+            self.__img_handling(source_path)
+        elif(source_path.endswith(".mp4")):
+            self.__vid_handling(source_path)
         else:
-    #print("Video was not found")
-            break
-    vid_capture.release()       # Releasing the object, so we can delete the files in sace function
-    out.release()
-    cv2.destroyAllWindows()
+            raise(TypeError("File is not .jpg or .mp4"))
 
-    saveToCloud(dir1,dir2, dataClass)
+    def __img_handling(self, source):
+        img = cv2.imread(source)
+        cloud_dir = "tempForData\\imgf.jpg"
+        vert_pic = cv2.flip(img, 1)
+        cv2.imwrite(cloud_dir, vert_pic)
+        self.__save_to_cloud(source, cloud_dir)
 
-    
+    def __vid_handling(self, source):
+        vid_capture = cv2.VideoCapture(source)
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        cloud_dir = "tempForData\\vidf.mp4"
+        processed_vid = cv2.VideoWriter(cloud_dir, fourcc, 7.0, (400,256), 
+                                        isColor=False)
 
-    
+        while(vid_capture.isOpened()):
+            ret, frame = vid_capture.read()
+            if(ret):      
+                grayscale_frm = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)                                      
+                resized_frm = cv2.resize(grayscale_frm, (400,256), fx=0,
+                                        fy=0, interpolation=cv2.INTER_CUBIC)
+                vert_frame = cv2.flip(resized_frm, 1)
+                # Writing the processed video out
+                processed_vid.write(vert_frame)
+            else: break
 
+        # Releasing the object, so we can delete the files later
+        processed_vid.release()
+        cv2.destroyAllWindows()
+        self.__save_to_cloud(source, cloud_dir) 
 
-def saveToCloud(data, dataf, dataClass):
-    print("Ollaan save funktiossa ja saatiin: ", data," ja ", dataf)
+    def __save_to_cloud(self, source, processed):
+        rand_x = random.random()         #For naming a random numbers
+        rand_y = random.random()
 
-    x = random.random()         #For naming a random number generator
-    y = random.random()
+        # The data is put in collections based on the letter classification
+        letter = self.letters[int(self.data_class)]
+        # U to distinguish user based data
+        label = "U" + letter
 
-    #The data that gets labeled A goes all to the same collection, the U is for user based data
-    datanluokka = whatClass(int(dataClass))
-    if datanluokka == "":
-        print("Ei tullut luokaksi mitään arvoa")
-    else:
-        label = 'U' + datanluokka
+        storage_dir = "dataFromUsers/" + label + "/data" + str(rand_x + rand_y)
+        # Now using FIREBASE STORAGE. Uploading the original data
+        self.storage.child(storage_dir).put(source, auth.emailAndPassword())                           
+        # Get URL of image
+        url = self.storage.child(storage_dir).get_url(auth.emailAndPassword())
+        # Now using FIRESTORE. Creating collection reference.
+        self.db.collection(label + "-URL").add({'URL':url,'num':rand_x+rand_y}) 
 
-        dirInStorage = "dataFromUsers/" + label + "/"
+        storage_dir = "dataFromUsers/" + label + "/dataf" + str(rand_x)
+        # Same to the processed data
+        self.storage.child(storage_dir).put(processed, auth.emailAndPassword())                         
+        url = self.storage.child(storage_dir).get_url(auth.emailAndPassword())
+        self.db.collection(label + "-URL").add({'URL':url,'num':rand_x})
 
-        name = "data" + str(x + y)
-        print("Kuvan nimeksi tulee: " + name)
-
-        #HOX! Now using FIREBASE STORAGE.
-        #Uploading the picture
-        #Child parametere is the wanted name for the data, if destination is a in another file the path is "A/my_image" for exmp. 
-        #put paramete are the path of the file
-        storage.child(dirInStorage + name).put(data, a.emailAndPassword())                           
-
-        #Get URL of image
-        url = storage.child(dirInStorage + name).get_url(a.emailAndPassword())
-        print(url)
- 
-        #HOX! Now using FIRESTORE.
-        db.collection(label + '-URL').add({'URL':url,'num':x+y}) 
-
-        name = "dataf" + str(x)
-        print("Kuvan nimeksi tulee: " + name)
-
-        #Same to the turned picture
-        storage.child(dirInStorage + name).put(dataf, a.emailAndPassword())                           
-
-        url = storage.child(dirInStorage + name).get_url(a.emailAndPassword())
-        print(url)
-          
-        db.collection(label + '-URL').add({'URL':url,'num':x+y})
-
-    #Deleting the picture from the server
-    os.remove(data)
-    os.remove(dataf)
-
-
-
-def whatClass(x):
-    print("Ollaan what Class funktissa")
-
-    classes = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Å","Ä","Ö"]
-    return classes[x]
+        # Deleting the data from the server
+        os.remove(source)
+        os.remove(processed)
 
 
-
-def dataReceive(dataClass, whereGet):
-    print("Ollaan data Editing For Saving osiossa ja dataReceive funktiossa ja saatiin parametreinä path: " + whereGet + " ja ennustuksesta data luokka ", dataClass)
-
-    state,path = img_Or_Vid(whereGet)
-
-    print("Käytiin katsomassa kuva vai video ja saatiin state (1=kuva, 2=video): ", state , " ja path: " + path)
-
-    if state == 1:  
-        print("Tila oli 1, eli käsitellään kuva")
-        whereGet = path
-        img_Handling(whereGet, dataClass)
-    elif state == 2:
-        print("Tila oli 2, eli käsitellään video")
-        whereGet = path
-        vid_Handling(whereGet, dataClass)
-    else:
-        print("Nyt meni joku vikaan, ei ohjelman mukaan saatu kuvaa tai videota. HUOM oikeat muodot .jpg ja .mp4")
-
-
-
+# For Testing
 if __name__ == '__main__':
-    path = "tempForData\\vid.mp4"
-
-
+    data_handler = TranslatorDataHandling()
+    data_handler.process_data("tempForData\\sign_for_a.jpg", 0)
