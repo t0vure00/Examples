@@ -41,7 +41,6 @@ void serial_rx_int() {
     if (pc.read(&c,1)) {
         command[command_cnt] = c;
         command_cnt++;
-
         if (c == '\r') {
             new_command = true;
         }
@@ -51,25 +50,19 @@ void serial_rx_int() {
 int parser(char *gps_str){
     int count = 0;
     double temp = 0;
-
     token = strtok(gps_str, delim);
 
     while(token != NULL){
         switch(count){
             case 0:
-                    if(strncmp(token,"$GPGGA",6) == 0){
-                    //debug("MNEA viesti vastaanotettu %s\n", token);
-                    }else{
-                        //debug("EI MNEA viesti");
-                        return 1;
-                    }
+                if(strncmp(token,"$GPGGA",6) != 0){
+                    return 1;
+                }
                 break;
             case 1:
                 if(std::stod(token) > 0){
                     timestamp = std::stof(token);
-                    //debug("timestamp is: %s\n", token);
                 }else{
-                    //debug("Palautetaan 2\n");
                     return 2;
                 }
                 break;
@@ -77,18 +70,13 @@ int parser(char *gps_str){
                 temp = std::stod(token) / 100;
                 if(temp >= 0 && temp <=90){
                     latitude_N = std::stof(token);
-                    //debug("latitude_N is: %s\n", token);
                 }else{
-                    //debug("Palautetaan 3\n");
                     return 3;
                 }
                 break;
             case 3:
                 north_found = strncmp(token, "N", 1);
-                if(north_found == 0){
-                    //debug("north is found: %d\n", north_found);
-                }else{
-                    //debug("north was not correct");
+                if(north_found != 0){
                     return 4;
                 }
                 break;
@@ -96,23 +84,18 @@ int parser(char *gps_str){
                 temp = std::stod(token) / 100;
                 if(temp >= 0 && temp<= 180){
                     longitude_E = std::stof(token);
-                    //debug("longitude_e is: %s\n", token);
                 }else{
-                    //debug("longitude väärä");
                     return 5;
                 }
                 break;
             case 5:
                 east_found = strncmp(token,"E",1);
-                if(east_found == 0){
-                    //debug("east is found: %d\n", east_found);
-                }else{
-                    //debug("east was not correct\n");
+                if(east_found != 0){
                     return 6;
                 }
                 break;
         }
-        count = count + 1;
+        count += 1;
         token = strtok(NULL, delim);     
     }
     return 0;
